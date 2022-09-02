@@ -1,0 +1,41 @@
+use role {{ role_name }};
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ archive_wh }};
+call WAREHOUSES_LIVE_STORED_PROCEDURE();
+create
+or replace procedure {{ db_name }}.{{ schemata }}.SUSPEND_ALL_WAREHOUSES() returns VARCHAR -- return final create statement
+language javascript EXECUTE AS CALLER as $$
+    
+    // build query to get all warehouses name
+    var get_tables_stmt = "select \"name\", \"state\" from {{ db_name }}.{{ schemata }}.WAREHOUSES_LIVE"
+
+    var get_tables_stmt = snowflake.createStatement({sqlText:get_tables_stmt });
+
+    // get result set containing all table names
+    var tables = get_tables_stmt.execute();
+
+    // rows count to iterate
+    var row_count = get_tables_stmt.getRowCount();
+    var rows_iterated = 0; 
+
+    // loop over result set to build statement
+    while (tables.next())  {
+        rows_iterated += 1;
+
+        // we get values from the first (and only) column in the result set
+        var warehouse_name = tables.getColumnValue(1); 
+        var state = tables.getColumnValue(2); 
+        if (state !== 'SUSPENDED' && warehouse_name !== '{{metadata_wh}}' && warehouse_name !== '{{archive_wh}}')
+        {
+        // this will obviously fail if the column count doesnt match
+        var show_statement = `ALTER WAREHOUSE IF EXISTS "${user_name}" SUSPEND`;
+        var show_statement = snowflake.createStatement( {sqlText: show_statement} );
+        show_statement.execute();
+        };
+     }
+    // return status
+    return "suspend all warehouse successful";
+  $$;
+-- Create task to schedule refresh show command tables
+call SUSPEND_ALL_WAREHOUSES(); 

@@ -1,0 +1,4 @@
+USE ROLE SYSADMIN;
+{% for stg in stage %}
+DROP STAGE IF EXISTS {{ stg.stage_name }};
+{% endfor %}

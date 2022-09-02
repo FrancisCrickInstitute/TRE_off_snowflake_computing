@@ -1,0 +1,9 @@
+
+{# This template helps ORG_ADMIN have the latest data
+We use it for Service Now form. #}
+
+use role accountadmin;
+use database ORG_ADMIN_DB;
+use schema ADMIN_SCH;
+use warehouse CORE_WH;
+execute task replica_refresh_task_for_{{ NAME_OF_BODY }};

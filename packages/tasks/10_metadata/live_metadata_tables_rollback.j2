@@ -1,0 +1,14 @@
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ warehouse_name }};
+
+drop table if exists EXPERIMENT_LIVE;
+drop table if exists GRANTS_TO_USERS_LIVE;
+drop table if exists WAREHOUSES_LIVE;
+
+drop procedure if exists {{ db_name }}.{{ schemata }}.GRANTS_TO_USERS_LIVE_stored_procedure();
+drop task if exists show_command_grant_to_users_live;
+
+drop procedure if exists {{ db_name }}.{{ schemata }}.WAREHOUSES_LIVE_stored_procedure();
+drop task if exists show_command_warehouses_live;

@@ -1,0 +1,22 @@
+{% for usr in users %}
+    USE ROLE SECURITYADMIN;
+    CREATE USER IF NOT EXISTS "{{usr.username}}"
+    PASSWORD = "{{usr.password}}"
+    {% if usr.change_password and (usr.okta is not defined or not usr.okta) -%}
+    MUST_CHANGE_PASSWORD = TRUE
+    {% else %}
+    MUST_CHANGE_PASSWORD = FALSE
+    {% endif -%}
+    LOGIN_NAME = "{{usr.login}}"
+    DISPLAY_NAME = "{{usr.display_name}}"
+    FIRST_NAME = "{{usr.first_name}}"
+    LAST_NAME = "{{usr.last_name}}"
+    EMAIL = '{{usr.email}}'
+    COMMENT = "{{usr.comment}}";
+{% endfor %}
+
+use role accountadmin;
+use database METADATA_DB;
+use schema METADATA_SCH;
+use warehouse CORE_WH;
+call GRANTS_TO_USERS_LIVE_stored_procedure();

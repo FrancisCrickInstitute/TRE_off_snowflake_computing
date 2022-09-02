@@ -1,0 +1,18 @@
+attrs == 20.3.0
+click == 7.1.2
+Jinja2 == 2.11.2
+jsonschema == 3.2.0
+MarkupSafe == 1.1.1
+pyrsistent == 0.17.3
+PyYAML == 5.3.1
+six == 1.15.0
+snowflake-connector-python == 2.7.1
+python-dotenv == 0.19.2
+pre-commit == 2.15.0
+pyhcl == 0.4.4
+boto3~=1.20.24
+pytest
+pytest-ordering
+okta
+Sphinx
+sphinx-rtd-theme

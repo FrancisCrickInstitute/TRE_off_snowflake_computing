@@ -1,0 +1,41 @@
+{#
+This script allows us to modify the resource monitor and will only execute elements 
+of the script where we provide a variable. Where we need 2 variables they have been grouped
+together in an if statement. 
+
+We cannot rename a resource monitor so that option has not been made avaiable. 
+#}
+{#
+To alter resource monitor we need the following variables:
+NOTE: with the exception of frequency and start_timestamp which are needed as a pair all other variables are optional
+    resource_monitors [VARIABLE SET]
+        resource_monitor_name [STRING]
+        credit_quota [NUMBER]
+        frequency [DAY/MONTH/YEAR/NEVER]
+        start_timestamp [IMMEDIATE/DATETIME]
+        end_timestamp [DATETIME]
+        notify_percent [NUMBER]
+        suspend_percent [NUMBER]
+        suspend_immediate_percent [NUMBER]
+        resource_monitor_name [STRING]
+        resource_monitor_role [STRING]
+#}
+USE ROLE ACCOUNTADMIN;
+{% for rm in resource_monitors %}
+ALTER RESOURCE MONITOR IF EXISTS {{ rm.resource_monitor_name }} with credit_quota= {{ rm.credit_quota }}
+    {% if 'frequency' in rm and 'start_timestamp' in rm -%}
+    {% if rm.frequency and rm.start_timestamp %}
+FREQUENCY = {{ rm.frequency }}
+START_TIMESTAMP = '{{ rm.start_timestamp }}'
+    {% endif -%}
+    {% endif -%}
+    {% if 'end_timestamp' in rm -%}
+    {% if rm.end_timestamp -%}
+END_TIMESTAMP = '{{  rm.end_timestamp }}'
+    {% endif -%}
+TRIGGERS ON {{ rm.notify_percent }} percent DO NOTIFY
+         ON {{ rm.suspend_percent }} percent DO SUSPEND
+         ON {{ rm.suspend_immediate_percent }} percent DO SUSPEND_IMMEDIATE;
+
+GRANT MONITOR ON RESOURCE MONITOR {{ rm.resource_monitor_name }} TO ROLE {{ rm.resource_monitor_role }};
+{% endfor %}

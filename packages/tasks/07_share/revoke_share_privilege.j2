@@ -1,0 +1,9 @@
+{% for share_role in share_roles %}
+USE ROLE ACCOUNTADMIN; 
+
+REVOKE IMPORT SHARE ON ACCOUNT FROM {{ share_role.role_name }};
+{% if share_role.create_share %}
+REVOKE CREATE SHARE ON ACCOUNT FROM {{ share_role.role_name }};
+{% endif %}
+
+{% endfor %}

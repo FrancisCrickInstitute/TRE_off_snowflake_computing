@@ -1,0 +1,9 @@
+{% for share_role in share_roles %}
+USE ROLE ACCOUNTADMIN; 
+
+GRANT IMPORT SHARE ON ACCOUNT TO {{ share_role.role_name }};
+{% if share_role.create_share %}
+GRANT CREATE SHARE ON ACCOUNT TO {{ share_role.role_name }};
+{% endif %}
+
+{% endfor %}

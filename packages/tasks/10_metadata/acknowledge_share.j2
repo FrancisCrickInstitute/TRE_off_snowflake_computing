@@ -1,0 +1,5 @@
+use role accountadmin;
+create
+or replace database {{ name_of_body }}_SHARE_IN_DB
+from
+    share {{ sub_acc_locator }}.{{ name_of_body }}_SHARE_IN_DB;

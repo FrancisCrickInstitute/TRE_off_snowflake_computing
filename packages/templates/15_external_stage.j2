@@ -1,0 +1,18 @@
+name: external stage
+tasks:
+  - name: create external stage
+    template: 13_external_stage/create_external_stage.j2
+    revert: 13_external_stage/delete_external_stage.j2
+    variables:
+      - name: name
+        value: {{ NAME }}_external_stage
+      - name: url
+        value: {{ URL }}
+      - name: file_format
+        value: {{ FILE_FORMAT | default(false) }}
+      - name: aws_key_id
+        value: {{ AWS_KEY_ID }}
+      - name: aws_secret_key
+        value: {{ AWS_SECRET_KEY }}
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}

@@ -1,0 +1,6 @@
+{% for share in shares %}
+USE ROLE ACCOUNTADMIN; 
+
+DROP SHARE IF EXISTS {{ share.share_name }};
+
+{% endfor %}

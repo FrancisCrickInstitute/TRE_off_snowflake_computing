@@ -1,0 +1,10 @@
+  name: Setup a data share between snowflake accounts
+  tasks:
+    - name: sharing database with collaboration
+      template: 07_share/share_db_with_account.j2
+      revert: 07_share/drop_db_with_account.j2
+      variables:
+        name: shares
+        value: 
+          - share_name: {{ share_name }}
+            account_locator: {{ account_locator }}

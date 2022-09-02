@@ -1,0 +1,15 @@
+name: create new users within a certain subaccount
+tasks: 
+  - name: grant roles to user
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables:
+      - name: roles
+        value:
+        - role_name: {{ROLE_NAME}}
+          recipient_type: USER
+          recipient_name: {{LOGIN}}
+
+  
+
+          

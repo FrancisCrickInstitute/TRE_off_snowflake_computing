@@ -1,0 +1,2 @@
+use role accountadmin;
+alter database {{ db_name }} enable replication to accounts {{ master_region }}.{{ org_admin_acc }} ignore edition check;

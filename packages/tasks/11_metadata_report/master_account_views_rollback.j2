@@ -1,0 +1,13 @@
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schema_name }};
+use warehouse {{ warehouse_name }};
+
+{# {% for table in metadata_tables %}
+drop task if exists stored_procedure_views_{{ table.name }};
+
+drop procedure if exists {{ db_name }}.{{ schema_name }}.{{ table.name }}_stored_procedure();
+{% endfor %}
+
+drop table if exists {{ db_name }}.{{ schema_name }}.list_of_active_share_in_db_temp; #}
+

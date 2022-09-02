@@ -1,0 +1,19 @@
+-- EMAIL Support with account locator id and account db_name
+{#
+While we cannot delete the account we, we need to email snowflake support requsting deletion of the account
+we are able to capture when the account deletion request was sent by updating the metadata table 
+#}
+{#
+To create a account we need the following variables: 
+    accounts [VARIABLE SET]
+        account_name [STRING]
+#}
+{% for acc in accounts %}
+use role accountadmin;
+use database ORGANIZATION_USAGE_DB;
+use schema ORG_SCH;
+use warehouse CORE_WH;
+
+delete  from UPDATE_ACCOUNT_RECORD
+where ACCOUNT_NAME = '{{acc.account_name}}'
+{% endfor %}

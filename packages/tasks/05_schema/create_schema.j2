@@ -1,0 +1,105 @@
+{% for schema in schemata %}
+{#
+The create schema script will create the schema in the specified database and will create 
+RO and RW roles which are inherited by the DB_RO and DB_RW role, this way permissions are 
+granular enought that if we decide to grant permissions on a specific schema we can do this 
+but if we need to grant permissions on the database we can manage permissions with ease
+#}
+
+{#
+To create a schema we need the following variables: 
+    db_name [STRING]
+    shemata [VARIABLE SET]
+        schema_name [STRING]
+        comment [STRING]
+#}
+--using the recommended role to create objects in snowflake
+USE ROLE SYSADMIN;
+USE DATABASE {{ db_name }};
+
+CREATE SCHEMA IF NOT EXISTS {{ db_name }}.{{ schema.schema_name }} 
+WITH COMMENT = '{{ schema.comment }}';
+
+-- using security admin to create the roles
+USE ROLE SECURITYADMIN;
+
+--Creating roles if the do not exist 
+
+--Creating read role
+CREATE ROLE IF NOT EXISTS ROLE_{{ schema.schema_name }}_RO
+WITH COMMENT = 'role to read all objects in {{ schema.schema_name }}';
+
+--creating read write role
+CREATE ROLE IF NOT EXISTS ROLE_{{ schema.schema_name }}_RW
+WITH COMMENT = 'role to read and write all objects in {{ schema.schema_name }}';
+
+-- granting permissions based on datalake design
+GRANT USAGE ON DATABASE {{ db_name }}
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+
+GRANT USAGE,CREATE SCHEMA ON DATABASE {{ db_name }}
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+GRANT USAGE ON SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+
+GRANT USAGE ON SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+-- granting permissions to future objects
+GRANT SELECT ON ALL TABLES IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+
+GRANT SELECT ON ALL VIEWS IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RO;
+
+--Creating a read wite role for the schema
+GRANT ALL PRIVILEGES ON SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+
+REVOKE OWNERSHIP ON FUTURE VIEWS IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+FROM ROLE ROLE_{{ schema.schema_name }}_RW;
+GRANT OWNERSHIP ON FUTURE VIEWS IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+
+REVOKE OWNERSHIP ON FUTURE TABLES IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+FROM ROLE ROLE_{{ schema.schema_name }}_RW;
+GRANT OWNERSHIP ON FUTURE TABLES IN SCHEMA {{ db_name }}.{{ schema.schema_name }} 
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+
+GRANT ROLE ROLE_{{ schema.schema_name }}_RO 
+TO ROLE ROLE_{{ schema.schema_name }}_RW;
+
+-- We can grant permissions to the db role
+CREATE ROLE IF NOT EXISTS ROLE_{{ db_name }}_RO
+WITH COMMENT = 'role to read all objects in database {{ db_name }}';
+
+GRANT ROLE ROLE_{{ schema.schema_name }}_RO 
+TO ROLE ROLE_{{ db_name }}_RO;
+
+CREATE ROLE IF NOT EXISTS ROLE_{{ db_name }}_RW
+WITH COMMENT = 'role to read write to all objects in database {{ db_name }}';
+
+GRANT ROLE ROLE_{{ schema.schema_name }}_RW
+TO ROLE ROLE_{{ db_name }}_RW;
+
+--following snowflake best practice and granting all custom roles to sysadmin
+GRANT ROLE ROLE_{{ schema.schema_name }}_RO
+TO ROLE SYSADMIN;
+
+GRANT ROLE ROLE_{{ schema.schema_name }}_RW
+TO ROLE SYSADMIN;
+
+GRANT ROLE ROLE_{{ db_name }}_RO
+to ROLE SYSADMIN;
+
+GRANT ROLE ROLE_{{ db_name }}_RW
+to ROLE SYSADMIN;
+{% endfor -%}

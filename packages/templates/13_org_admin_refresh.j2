@@ -1,0 +1,10 @@
+name: refresh org admin table after user is create
+tasks:
+  - name: org admin refresh
+    template: 10_metadata/org_admin_refresh.j2
+    variables:
+      - name: NAME_OF_BODY
+        value: {{ NAME_OF_BODY }}
+
+
+

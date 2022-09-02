@@ -1,0 +1,6 @@
+use role accountadmin;
+use database ORG_ADMIN_DB;
+use schema ADMIN_SCH;
+use warehouse CORE_WH;
+
+execute task replica_refresh_task_for_{{ NAME_OF_BODY }};

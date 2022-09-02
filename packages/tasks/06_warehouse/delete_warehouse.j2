@@ -1,0 +1,19 @@
+{#
+This script will delete the warehouse and drop the roel we created to be able to use the warehouse
+we are able to clear any roles associated with the warehouse allowing us to reduce the number of orphan roles in snowflake
+#}
+{#
+To delete a warehouse we need the following variables:
+    warehouse [VARIABLE SET]
+      wh_name [STRING]
+#}
+{% for wh in warehouse %}
+USE ROLE SECURITYADMIN; 
+
+DROP ROLE IF EXISTS ROLE_{{ wh.wh_name }};
+
+USE ROLE SYSADMIN;
+
+DROP WAREHOUSE IF EXISTS {{ wh.wh_name }} ;
+
+{% endfor %}

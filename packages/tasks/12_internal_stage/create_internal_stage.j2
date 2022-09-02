@@ -1,0 +1,12 @@
+USE ROLE SYSADMIN;
+{% for stg in stage %}
+USE DATABASE {{ stg.db_name }};
+CREATE STAGE IF NOT EXISTS {{ stg.stage_name }}
+  DIRECTORY = (ENABLE = true)
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+  COPY_OPTIONS = (ON_ERROR='skip_file')
+  {% if 'file_format' in stg -%}
+  FILE_FORMAT = {{ stg.file_format }}
+  {% endif -%}
+  COMMENT = '{{ stg.comment }}';
+{% endfor %}

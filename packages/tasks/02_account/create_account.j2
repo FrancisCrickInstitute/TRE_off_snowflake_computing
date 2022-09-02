@@ -1,0 +1,60 @@
+{#
+We create new accounts via this script is created using ORGADMIN role it is, therefore, important the (service) account used to
+create the account has this privelege otherwise the script will error at run time. 
+We also require ALL the variables in this script to be able to create the account.
+
+Args:
+    accounts(dict): desc
+    account_name(string): desc
+#}
+{#
+To create a account we need the following variables: 
+    accounts [VARIABLE SET]
+        account_name [STRING]
+        account_admin_name [STRING]
+        account_admin_password [STRING]
+        account_admin_email [STRING]
+        snowflake_edition [STRING]
+        region [STRING]
+By default, Snowflake disable replica in accout,
+we need to set enable after creating account.
+#}
+USE ROLE ORGADMIN;
+{% for acc in accounts %}
+CREATE ACCOUNT IF NOT EXISTS "{{ acc.account_name }}"
+ADMIN_NAME = '{{ acc.account_admin_name }}' , 
+ADMIN_PASSWORD = '{{ acc.account_admin_password }}',
+MUST_CHANGE_PASSWORD = FALSE,
+EMAIL = '{{ acc.account_admin_email }}', 
+EDITION = {{ acc.snowflake_edition }}, 
+REGION = "{{ acc.region }}",
+REGION_GROUP=PUBLIC;
+USE WAREHOUSE "{{ acc.warehouse }}" ;
+show organization accounts;
+set locator = (select "account_locator" from (
+SELECT
+        *
+    FROM
+        TABLE(RESULT_SCAN(LAST_QUERY_ID()))) where "account_name" = '{{ acc.account_name }}');
+ select system$global_account_set_parameter($locator,
+  'ENABLE_ACCOUNT_DATABASE_REPLICATION', 'true');
+
+{#
+This Script will capture metadata which will be used later to alow the business to see data related to the account
+We put the data in a table in the ORGANIZATION_USAGE_DB by calling the stored procedure show_table_ORGANIZATION_ACCOUNTS_stored_procedure  
+#}
+use role accountadmin;
+use database ORGANIZATION_USAGE_DB;
+use schema ORG_SCH;
+use warehouse CORE_WH;
+call show_table_ORGANIZATION_ACCOUNTS_stored_procedure();
+insert into UPDATE_ACCOUNT_RECORD
+select 
+"account_locator",
+"account_name",
+'{{ acc.consortium_id}}' as CONSORTIUM_ID,
+'{{ acc.account_type }}' as TYPE,
+"account_url" as URL
+from ORGANIZATION_USAGE_DB.ORG_SCH.ORGANIZATION_ACCOUNTS_LIVE
+WHERE "account_name"  = '{{ acc.account_name }}';
+{% endfor %}

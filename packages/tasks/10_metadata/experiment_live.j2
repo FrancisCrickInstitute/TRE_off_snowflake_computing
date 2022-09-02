@@ -1,0 +1,14 @@
+use role accountadmin;
+use database {{DATABASE}};
+use schema {{SCHEMA}};
+use warehouse {{WAREHOUSE}};
+insert into EXPERIMENT_LIVE
+SELECT current_account() as ACCOUNT_LOCATOR,  
+ '{{NAME_OF_BODY}}' as ACCOUNT_NAME,   
+ '{{experiment_name}}' as EXPERIMENT,      
+ '{{start_date}}' as START_DATE,
+ '{{end_date}}' as END_DATE,
+ '{{credit_collab_experiment}}' as CREDITS_COLLAB_EXPERIMENTER,
+ '{{credit_collab_curator}}' as CREDITS_COLLAB_DATA_CURATOR,
+ '{{contact_period}}' as CONTRACT_PERIOD,
+ '{{NOTIFY_PERCENT}}' as NOTIFY_PERCENT

@@ -1,0 +1,30 @@
+name: create new users within a certain subaccount
+tasks:  
+  - name: creating user
+    template: 09_users/create_user.j2
+    revert: 09_users/drop_user.j2
+    variables:
+      - name: users 
+        value:
+        - username: {{LOGIN}}
+          password: {{PASSWORD}}
+          login: {{LOGIN}}
+          display_name: {{LOGIN}}
+          first_name: {{FIRSTNAME}}
+          last_name: {{LASTNAME}}
+          email: {{EMAIL}}
+          okta: {{ OKTA_ENABLED }}
+          comment: "User created for {{LOGIN}} for {{CONSORTIUM_ID}}"
+          db_name: METADATA_DB
+          schema_name: METADATA_SCH
+          change_password: {{ CHANGE_PASSWORD|default("TRUE", true)}}
+       
+  - name: grant roles to user 
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables:
+      - name: roles
+        value:
+        - role_name: {{ROLE_NAME}}
+          recipient_type: USER
+          recipient_name: {{LOGIN}}

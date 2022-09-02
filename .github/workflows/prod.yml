@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  # Triggers the workflow on pull request events to main branch.
+  pull_request:
+    branches: [ production ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: deploy
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Credentials for AWS are loaded from secrets.
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_SECRET_PROD }}
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      # Checks-out the repository under $GITHUB_WORKSPACE.
+      - uses: actions/checkout@v3
+
+      # Installs terraform
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.14.4
+      # Initialize terraform state from s3 bucket
+      - name: Terraform init
+        id: init
+        run: terraform init -backend-config=prod.hcl
+      # Runs terraform against DEV environment.
+      - name: Terraform apply
+        run: terraform apply -auto-approve -var="architecture=x86_64" -var="environment=prod" -var="project=tre" -var="createdby=snowflake-tre-terraform-pipeline"
+
+  documentation:
+    name: documentation
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_SECRET_PROD }}
+    defaults:
+      run:
+        working-directory: docs
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Install python 3.8 in Ubuntu runner.
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Build documentation
+        run: |
+          sphinx-apidoc -f -o ./source/root ..
+          sphinx-apidoc -f -o ./source/lambda ../lambda
+          make clean
+          make html
+      - name: Publish documentation
+        run: aws s3 cp build/html s3://tre-documentation-prod/ --recursive
+
+
+

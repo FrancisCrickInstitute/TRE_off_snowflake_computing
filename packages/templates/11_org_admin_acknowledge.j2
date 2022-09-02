@@ -1,0 +1,77 @@
+name: create acknowledge for share or replica
+tasks:  
+  - name: metadata acknowledge
+    template: 10_metadata/acknowledge_replica.j2
+    revert: 10_metadata/acknowledge_replica_rollback.j2
+    variables:
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}
+      - name: sub_acc_locator
+        value: {{ SUB_ACC_LOCATOR }}
+      - name: subaccount_region
+        value: {{ REGION }}
+      - name: org_admin_db
+        value: ORG_ADMIN_DB
+      - name: org_admin_schema 
+        value: ADMIN_SCH
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTE
+      - name: environment
+        {% if ENV is defined and ENV.upper() == "DEV" %}
+        value: _DEV
+        {% else %}
+        value: 
+        {% endif %}
+  - name: org admin stored procedures
+    template: 11_metadata_report/master_account_views.j2
+    revert: 11_metadata_report/master_account_views_rollback.j2
+    variables:
+      - name: metadata_tables 
+        value:
+        - name: SHARES
+        - name: WAREHOUSES
+        - name: WAREHOUSES_LIVE
+        - name: RESOURCE_MONITORS
+        - name: ACCESS_HISTORY
+        - name: AUTOMATIC_CLUSTERING_HISTORY
+        - name: COMPLETE_TASK_GRAPHS
+        - name: COPY_HISTORY
+        - name: DATABASES
+        - name: DATABASE_STORAGE_USAGE_HISTORY
+        - name: DATA_TRANSFER_HISTORY
+        - name: GRANTS_TO_ROLES
+        - name: GRANTS_TO_USERS
+        - name: LOAD_HISTORY
+        - name: LOGIN_HISTORY
+        - name: METERING_DAILY_HISTORY
+        - name: METERING_HISTORY
+        - name: PIPE_USAGE_HISTORY
+        - name: REPLICATION_USAGE_HISTORY
+        - name: ROLES
+        - name: SCHEMATA
+        - name: STAGES
+        - name: STAGE_STORAGE_USAGE_HISTORY
+        - name: TAGS
+        - name: TAG_REFERENCES
+        - name: USERS
+        - name: STORAGE_USAGE
+        - name: QUERY_HISTORY
+        - name: WAREHOUSE_METERING_HISTORY
+        - name: GRANTS_TO_USERS_LIVE
+        - name: USAGE_PRIVILEGES
+        - name: TABLE_STORAGE_METRICS
+        - name: PROCEDURES
+        - name: OBJECT_PRIVILEGES
+        - name: TABLE_PRIVILEGES
+      - name: db_name
+        value: ORG_ADMIN_DB
+      - name: schema_name
+        value: ADMIN_SCH
+      - name: metadata_schema
+        value: METADATA_SCH
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTE

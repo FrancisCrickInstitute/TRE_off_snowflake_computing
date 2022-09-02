@@ -1,0 +1,19 @@
+USE ROLE SYSADMIN;
+{% for stg in stage %}
+{% if 'old_stage_name' in stg %}
+ALTER STAGE IF EXISTS {{ stg.old_stage_name }}
+  {% if 'stage_name' in stg%}
+  RENAME TO {{ stg.stage_name }}
+  {% endif %}
+  DIRECTORY = (ENABLE = true)
+  ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+  COPY_OPTIONS = (ON_ERROR='skip_file')
+  {% if 'file_format' in stg -%}
+  FILE_FORMAT = {{ stg.file_format }}
+  {% endif -%}
+    {% if 'comment' in stg %}
+  COMMENT = '{{ stg.comment }}'
+    {% endif %}
+  ;
+  {% endif %}
+{% endfor %}

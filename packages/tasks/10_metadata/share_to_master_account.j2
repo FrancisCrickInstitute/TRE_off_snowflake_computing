@@ -1,0 +1,20 @@
+use role accountadmin;
+create
+or replace share {{ share_name }};
+grant usage on database {{ db_name }} to share {{ share_name }};
+grant usage on schema {{ schema_name }} to share {{ share_name }};
+grant
+select
+    on all tables in schema {{ db_name }}.{{ schema_name }} to share {{ share_name }};
+alter share {{ share_name }}
+add
+    accounts = {{ org_admin_acc}};
+
+use database {{ db_name }};
+use schema {{ schema_name }};
+create task if not exists
+master_{{ share_name }} WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+grant
+select
+    on all tables in schema {{ db_name }}.{{ schema_name }} to share {{ share_name }};
+alter task master_{{ share_name }} resume;

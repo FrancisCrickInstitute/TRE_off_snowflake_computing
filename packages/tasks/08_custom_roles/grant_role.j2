@@ -1,0 +1,28 @@
+USE ROLE SECURITYADMIN;
+
+{% for rl in roles %}
+{% if rl.recipient_type.upper() == 'ROLE' %}
+    {% if rl.role_name.upper() in ['SYSADMIN', 'SECURITYADMIN','USERADMIN','ACCOUNTADMIN','ROLE_BOARD_MEMBER', 'ROLE_ORG_DATA_CURATOR','ROLE_ACCOUNTABLE_PERSON','ROLE_METADATA_CURATOR'] %}
+    {# adding if statement to manage role setup#}
+-- if a role is inheriting SYS Roles in snowflake to avoid circular hierarchy error we need to ensure the role is not assigned to SYSADMIN
+REVOKE ROLE {{ rl.recipient_name }}
+FROM ROLE SYSADMIN; 
+    {% endif %}
+{% endif %}
+
+GRANT ROLE {{ rl.role_name }} 
+TO {{ rl.recipient_type }} "{{ rl.recipient_name }}";
+{# making the last role granted to a user its drfault role #}
+    {% if rl.recipient_type.upper() == 'USER' %}
+    ALTER USER IF EXISTS "{{ rl.recipient_name }}"
+    SET DEFAULT_ROLE = {{ rl.role_name }} ;
+    {% endif %}
+
+{% endfor %}
+
+use role accountadmin;
+use database METADATA_DB;
+use schema METADATA_SCH;
+use warehouse CORE_WH;
+call GRANTS_TO_USERS_LIVE_stored_procedure();
+

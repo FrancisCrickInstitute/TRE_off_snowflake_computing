@@ -1,0 +1,15 @@
+**/.env
+create_secret.py
+*.zip
+terraform/.terraform/**/*
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+.idea/**/*
+packages/**/*.yml
+
+**/__pycache__/**/*
+**/.pytest_cache/**/*
+
+docs/build/**/*
+.vscode/**/*

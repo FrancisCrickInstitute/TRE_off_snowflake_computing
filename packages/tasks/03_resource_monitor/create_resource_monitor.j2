@@ -1,0 +1,42 @@
+{#
+It is important to remember this script will only create a resource monitor, 
+we still need to assign it to the relevant object (account, warehouse)
+
+once we get to the end timestamp date the object will be suspended we should 
+be careful with this field specially when assigning a resource monitor to an Account
+#}
+
+{#
+To create a database we need the following variables: 
+    resource_monitors [VARIABLE SET]
+        resource_monitor_name [STRING]
+        credit_quota [NUMBER]
+        frequency [DAY/MONTH/YEAR/NEVER]
+        start_timestamp [IMMEDIATE/DATETIME]
+        end_timestamp [DATETIME]
+        notify_percent [NUMBER]
+        suspend_percent [NUMBER]
+        suspend_immediate_percent [NUMBER]
+        resource_monitor_name [STRING]
+        resource_monitor_role [STRING]
+#}
+USE ROLE ACCOUNTADMIN;
+{% for rm in resource_monitors %}
+CREATE RESOURCE MONITOR IF NOT EXISTS {{ rm.resource_monitor_name }} with credit_quota= {{ rm.credit_quota }}
+    {% if 'frequency' in rm and 'start_timestamp' in rm -%}
+    {% if rm.frequency and rm.start_timestamp %}
+FREQUENCY = {{ rm.frequency }}
+START_TIMESTAMP = '{{ rm.start_timestamp }}'
+    {% endif -%}
+    {% endif -%}
+    {% if 'end_timestamp' in rm -%}
+    {% if rm.end_timestamp -%}
+END_TIMESTAMP = '{{  rm.end_timestamp }}'
+    {% endif -%}
+    {% endif -%}
+TRIGGERS ON {{ rm.notify_percent }} percent DO NOTIFY
+         ON {{ rm.suspend_percent }} percent DO SUSPEND
+         ON {{ rm.suspend_immediate_percent }} percent DO SUSPEND_IMMEDIATE;
+
+GRANT MONITOR ON RESOURCE MONITOR {{ rm.resource_monitor_name }} TO ROLE {{ rm.resource_monitor_role }};
+{% endfor %}

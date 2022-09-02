@@ -1,0 +1,5 @@
+{% for share in shares %}
+USE ROLE ACCOUNTADMIN;
+
+ALTER SHARE IF EXISTS "{{ share.share_name }}" REMOVE ACCOUNTS = {{ share.account_locator}};
+{% endfor %}

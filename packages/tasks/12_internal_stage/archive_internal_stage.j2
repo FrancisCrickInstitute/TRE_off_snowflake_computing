@@ -1,0 +1,4 @@
+use role accountadmin;
+{% for table in tables %}
+copy into @{{ stage_name}}/{{ db_name }}/{{ schema }}/{{ table }}/ FROM {{ db_name }}.{{ schema }}.{{ table }};
+{% endfor %}

@@ -1,0 +1,15 @@
+{#
+This script allows us to suspend all warehouses in a given account, this may be needed to manage costs 
+or when we decide to archive a snowflake account.
+#}
+{#
+To suspend a warehouse we need the following variables:
+    warehouse [VARIABLE SET]
+      wh_name [STRING]
+#}
+USE ROLE ACCOUNTADMIN;
+{% for wh in warehouses %}
+    {% if 'wh_name' in wh  and wh.wh_name %}
+ALTER WAREHOUSE  {{ wh.wh_name }} SUSPEND;
+    {% endif%}
+{% endfor %}

@@ -1,0 +1,7 @@
+use role accountadmin;
+use database {{ org_admin_db }};
+use schema {{ org_admin_schema }};
+use warehouse {{ warehouse_name }};
+
+drop task if exists replica_refresh_task_for_{{ name_of_body }};
+drop database if exists {{ name_of_body }}_SHARE_IN_DB{{ environment }};

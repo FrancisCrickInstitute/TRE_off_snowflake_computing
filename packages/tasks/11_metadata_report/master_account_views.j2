@@ -1,0 +1,89 @@
+
+{# ! Run this template in ORG_ADMIN account
+We create a table list_of_active_share_in_db_temp to capture all accounts with
+metadata shared to ORG_ADMIN
+Then we have Stored procedure to update Union Views frequently to have all data
+The hard part is if any account having problem sharing data to ORG_ADMIN, a view
+will be collapsed and this impact reporting.
+For variables we have in this template:
+- metadata_tables: all tables we have from SHOW commands, ACCOUNT_USAGE, INFORMATION_SCHEMA
+A java script stored procedure will do the job of creating views #}
+
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schema_name }};
+use warehouse {{ warehouse_name }};
+
+
+{# This script make sure we only proceed accounts having database SHARE_IN_DB in ORG_ADMIN 
+COLLABORATION_SHARE_IN_DB is testing account, so we temporarily removed it from 
+ORG_ADMIN for stable reporting.
+#}
+
+-- create table to get list of active share in db
+
+show databases like '%_SHARE_IN_DB';
+create
+or replace table {{ db_name }}.{{ schema_name }}.list_of_active_share_in_db_temp as (
+    SELECT
+        *
+    FROM
+        TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+    WHERE "name" != 'COLLABORATION_SHARE_IN_DB'
+    and "name" != 'TLAB_SHARE_IN_DB'
+);
+
+{% for table in metadata_tables %}
+create
+or replace procedure {{ db_name }}.{{ schema_name }}.{{ table.name }}_stored_procedure() returns VARCHAR -- return final create statement
+language javascript as 
+$$
+    // build query to get tables from organization accounts
+    var get_tables_stmt = "select \"name\" from {{ db_name }}.{{ schema_name }}.list_of_active_share_in_db_temp"
+
+    var get_tables_stmt = snowflake.createStatement({sqlText:get_tables_stmt });
+
+    // get result set containing all table names
+    var tables = get_tables_stmt.execute();
+
+    // rows count to iterate
+    var row_count = get_tables_stmt.getRowCount();
+    var rows_iterated = 0; 
+
+    // define view name
+    var create_statement = "CREATE OR REPLACE VIEW {{ db_name }}.{{ schema_name }}.{{ table.name }}_view AS \n";
+
+    // loop over result set to build statement
+    while (tables.next())  {
+        rows_iterated += 1;
+
+        // we get values from the first (and only) column in the result set
+        var table_name = tables.getColumnValue(1); 
+
+        // this will obviously fail if the column count doesnt match
+        create_statement += "SELECT * FROM " + table_name + ".{{ metadata_schema}}.{{ table.name }}"
+
+        // add union all to all but last row
+        if (rows_iterated < row_count){
+            create_statement += "\n UNION ALL \n"
+        }
+     }
+
+    // create the view
+    var create_statement = snowflake.createStatement( {sqlText: create_statement} );
+    create_statement.execute();
+
+    // return the create statement as text
+    return create_statement.getSqlText();
+  $$;
+
+  -- Create task to schedule refresh show command tables
+create task if not exists
+stored_procedure_views_{{ table.name }} WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+call {{ table.name }}_stored_procedure();
+
+-- Resume task
+alter task stored_procedure_views_{{ table.name }} resume;
+execute task stored_procedure_views_{{ table.name }};
+
+  {% endfor %}

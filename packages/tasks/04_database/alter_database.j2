@@ -1,0 +1,32 @@
+{#
+In this script we are renaming the database and updating the role names 
+this way we are keeping the naming convention consistent and ensuring 
+linked objects are easier to identify
+#}
+{#
+To ALTER a database we need the following variables: 
+    databases [VARIABLE SET]
+        old_db_name [STRING]
+        new_db_name [STRING]
+        comment [STRING]
+#}
+{% for db in databases %}
+USE ROLE SYSADMIN;
+{% if 'old_db_name' in db  and 'new_db_name' in db%}
+{% if db.old_db_name  and db.new_db_name}
+ALTER DATABASE {{ db.old_db_name }} if EXISTS RENAME TO {{ db.new_db_name }};
+
+USE ROLE SECURITYADMIN;
+ALTER ROLE IF EXISTS ROLE_{{ db.old_db_name }}_RO RENAME TO ROLE_{{ db.new_db_name }}_RO
+WITH COMMENT = 'Role that can read all objects in schemas in {{ db.new_db_name }}';
+ALTER ROLE IF EXISTS ROLE_{{ db.old_db_name }}_RW RENAME TO ROLE_{{ db.new_db_name }}_RW
+WITH COMMENT = 'Role that can read and write to all objects in schemas in {{ db.new_db_name }}';
+
+-- snowflake best practice is to ensure all custom roles go to SYSADMIN
+GRANT ROLE ROLE_{{ db.new_db_name }}_RO
+TO ROLE SYSADMIN; 
+GRANT ROLE ROLE_{{ db.new_db_name }}_RW
+TO ROLE SYSADMIN;
+{% endif %}
+{% endif %}
+{% endfor %}

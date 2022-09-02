@@ -1,0 +1,7 @@
+USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ name_of_body }};
+
+create or replace stage {{ name }}
+  url='{{ url }}'
+  credentials=(aws_key_id='{{ aws_key_id }}' aws_secret_key='{{ aws_secret_key }}')
+  encryption=(type='AWS_SSE_KMS' kms_key_id = 'aws/key');

@@ -1,0 +1,10 @@
+{% for table in show_tables %}
+
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ warehouse_name }};
+
+drop procedure if exists show_table_{{ table.name }}_stored_procedure();
+drop task if exists show_command_{{ table.name }};
+{% endfor %}

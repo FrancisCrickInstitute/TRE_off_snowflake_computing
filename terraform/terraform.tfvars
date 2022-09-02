@@ -1,0 +1,8 @@
+runtime      = "python3.8"
+timeout      = "900"
+tag          = "latest"
+repo         = "fci"
+region       = "eu-west-2"
+architecture = "arm64"
+environment  = "dev"
+project      = "tre"

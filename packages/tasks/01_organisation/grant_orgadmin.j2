@@ -1,0 +1,18 @@
+{# 
+In Snowflake you cannot create Organisations we need to email Snowflake Support and ask that this be setup
+in the script below we are granting ORGADMIN role to a user. This role has the abiltity to create other snowflake accounts 
+and should not be granted to all users but only a serlect few and to the service account 
+that will be used to provision new snowflake accounts. 
+Once the accounts are created the ORGADMIN has no control on the new snowflake account- That can only be managed by 
+the accountadmin role for the new snowflake account. 
+#}
+
+{#
+To grant ORGADMIN priviledge we need the following variables: 
+    users [VARIABLE SET]
+        user_name [STRING]
+#}
+USE ROLE ACCOUNTADMIN; 
+{% for user in users %}
+GRANT ROLE ORGADMIN TO USER {{ user.user_name }};
+{% endfor %}

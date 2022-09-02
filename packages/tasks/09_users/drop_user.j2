@@ -1,0 +1,18 @@
+
+USE ROLE SECURITYADMIN;
+
+{% for user in users %}
+    DROP USER IF EXISTS
+    {% if '@' in user.username %}
+    "{{user.username}}";
+    {% else %}
+    {{user.username}};
+    {% endif%}
+   
+{% endfor %}
+
+use role accountadmin;
+use database METADATA_DB;
+use schema METADATA_SCH;
+use warehouse CORE_WH;
+call GRANTS_TO_USERS_LIVE_stored_procedure();

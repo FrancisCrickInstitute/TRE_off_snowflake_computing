@@ -1,0 +1,6 @@
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schema_name }};
+
+drop task if exists master_{{ share_name }};
+drop share if exists {{ share_name }};

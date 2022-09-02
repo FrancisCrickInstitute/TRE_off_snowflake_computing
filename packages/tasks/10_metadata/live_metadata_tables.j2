@@ -1,0 +1,133 @@
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ warehouse_name }};
+
+create table if not exists EXPERIMENT_LIVE ( 
+    ACCOUNT_LOCATOR varchar(100) default null,  
+    ACCOUNT_NAME varchar(100) default null,  
+    EXPERIMENT varchar(100) default null,  
+    START_DATE timestamp default null, 
+    END_DATE timestamp default null, 
+    CREDITS_COLLAB_EXPERIMENTER varchar(100) default null,
+    CREDITS_COLLAB_DATA_CURATOR varchar(100) default null,
+    CONTRACT_PERIOD varchar(100) default null,
+    NOTIFY_PERCENT varchar(100) default null);
+
+create table if not exists  GRANTS_TO_USERS_LIVE ( 
+    ACCOUNT_LOCATOR varchar(100) default null,  
+    ACCOUNT_NAME varchar(100) default null,  
+    ROLE varchar(100) default null,  
+    GRANTEE_NAME varchar(100) default null);
+
+show WAREHOUSES;
+
+create table if not exists WAREHOUSES_LIVE as 
+  SELECT 
+    '{{ name_of_body }}' AS NAME_OF_BODY, 
+    current_account() as ACCOUNT_LOCATOR, * 
+    FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+truncate table WAREHOUSES_LIVE;
+
+create
+or replace procedure {{ db_name }}.{{ schemata }}.GRANTS_TO_USERS_LIVE_stored_procedure() returns VARCHAR -- return final create statement
+language javascript EXECUTE AS CALLER as $$
+    // build USERS_LIVE table to get all live users
+    var show_user_live_stmt = "show users";
+    var show_user_live_stmt = snowflake.createStatement( {sqlText: show_user_live_stmt} );
+    show_user_live_stmt.execute();
+    
+    var create_user_live_stmt = "create or replace table {{ db_name }}.{{ schemata }}.USERS_LIVE as ( \
+    SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())))";
+    var create_user_live_stmt = snowflake.createStatement( {sqlText: create_user_live_stmt} );
+    create_user_live_stmt.execute();
+    
+    // empty table table grants_to_roles TO_DO
+    var grants_to_roles_live_stmt = "truncate table METADATA_DB.METADATA_SCH.GRANTS_TO_USERS_LIVE;"
+    var grants_to_roles_live_stmt = snowflake.createStatement( {sqlText: grants_to_roles_live_stmt} );
+    grants_to_roles_live_stmt.execute();
+    
+    // build query to get tables from organization accounts
+    var get_tables_stmt = "select \"name\" from {{ db_name }}.{{ schemata }}.USERS_LIVE"
+
+    var get_tables_stmt = snowflake.createStatement({sqlText:get_tables_stmt });
+
+    // get result set containing all table names
+    var tables = get_tables_stmt.execute();
+
+    // rows count to iterate
+    var row_count = get_tables_stmt.getRowCount();
+    var rows_iterated = 0; 
+
+    // loop over result set to build statement
+    while (tables.next())  {
+        rows_iterated += 1;
+
+        // we get values from the first (and only) column in the result set
+        var user_name = tables.getColumnValue(1); 
+
+        // this will obviously fail if the column count doesnt match
+        var show_statement = `SHOW GRANTS TO USER "${user_name}" `;
+        var show_statement = snowflake.createStatement( {sqlText: show_statement} );
+        show_statement.execute();
+        
+        var insert_statement = " insert into GRANTS_TO_USERS_LIVE \
+        SELECT  \
+        current_account() as ACCOUNT_LOCATOR,  \
+         '{{ name_of_body }}' as ACCOUNT_NAME,   \
+         \"role\" as ROLE,      \
+         \"grantee_name\" as GRANTEE_NAME   \
+         FROM     \
+            TABLE(RESULT_SCAN(LAST_QUERY_ID())) ";
+        var insert_statement = snowflake.createStatement( {sqlText: insert_statement} );
+        insert_statement.execute();
+     }
+
+
+    // return status
+    return "create live table successful";
+  $$;
+-- Create task to schedule refresh show command tables
+call GRANTS_TO_USERS_LIVE_stored_procedure(); 
+
+create task if not exists
+show_command_grant_to_users_live WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+call GRANTS_TO_USERS_LIVE_stored_procedure();
+
+-- Resume task
+alter task show_command_grant_to_users_live resume;
+
+create
+or replace procedure {{ db_name }}.{{ schemata }}.WAREHOUSES_LIVE_stored_procedure() returns VARCHAR -- return final create statement
+language javascript EXECUTE AS CALLER as $$
+    // empty table
+    var warehouse_truncate_sql = "truncate table METADATA_DB.METADATA_SCH.WAREHOUSES_LIVE;"
+    var warehouse_truncate_sql = snowflake.createStatement( {sqlText: warehouse_truncate_sql} );
+    warehouse_truncate_sql.execute();
+    // build WAREHOUSE_LIVE table to get all live users
+    var show_schemas_live_stmt = "show warehouses";
+    var show_schemas_live_stmt = snowflake.createStatement( {sqlText: show_schemas_live_stmt} );
+    show_schemas_live_stmt.execute();
+    var create_schemas_live_stmt = "insert into {{ db_name }}.{{ schemata }}.WAREHOUSES_LIVE  \
+    SELECT \
+    '{{ name_of_body }}' AS NAME_OF_BODY, \
+    current_account() as ACCOUNT_LOCATOR, * \
+    FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))";
+    var create_schemas_live_stmt = snowflake.createStatement( {sqlText: create_schemas_live_stmt} );
+    create_schemas_live_stmt.execute();
+    // return status
+    return "create live table successful";
+  $$;
+
+-- Create task to schedule refresh show command tables
+call WAREHOUSES_LIVE_stored_procedure();
+
+create task if not exists
+show_command_warehouses_live WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+call WAREHOUSES_LIVE_stored_procedure();
+
+-- Resume task
+alter task show_command_warehouses_live resume;
+
+

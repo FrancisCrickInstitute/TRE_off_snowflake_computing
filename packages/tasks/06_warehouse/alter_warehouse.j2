@@ -1,0 +1,80 @@
+{% for wh in warehouse %}
+USE ROLE SYSADMIN;
+{#
+The alter wharehouse script is as flexable as we could make it 
+it will alter the supplied variables if they are provided
+We are also trying to keep the role and the warehosue names ins sync
+#}
+{#
+To alter a warehouse we need the following variables:
+NOTE: as we can alter any element of the warehouse the only mandatory field we need is wh_name the rest are optional
+    warehouse [VARIABLE SET]
+      wh_name [STRING]
+      rename [STRING]
+      wh_size [STRING]
+      auto_suspend_seconds [STRING]
+      auto_resume [STRING]
+      comment [STRING]
+      resource_monitor_name [STRING]
+#}
+ALTER WAREHOUSE IF EXISTS {{ wh.wh_name }} 
+{% if 'rename' in wh and wh.rename %}
+RENAME TO {{ wh.rename }} 
+{% endif %}
+{% if 'wh_size' in wh  and wh.wh_size%}
+WITH WAREHOUSE_SIZE = {{ wh.wh_size }} 
+{% endif %}
+WAREHOUSE_TYPE = 'STANDARD' 
+{% if 'auto_suspend_seconds' in wh and wh.auto_suspend_seconds%}
+AUTO_SUSPEND = {{ wh.auto_suspend_seconds }} 
+{% endif %}
+{% if 'auto_resume' in wh and wh.auto_resume%}
+AUTO_RESUME = {{ wh.auto_resume }} 
+{% endif %}
+{% if 'comment' in wh and wh.comment %}
+COMMENT = '{{ wh.comment }}'
+{% endif %}
+;
+
+USE ROLE SECURITYADMIN; 
+{% if 'rename' in wh and wh.rename%}
+ALTER ROLE IF EXISTS ROLE_{{ wh.wh_name }} 
+RENAME TO ROLE_{{ wh.rename }}
+WITH COMMENT = 'Role created to allow usage of {{ wh.rename }} warehouse';
+GRANT OPERATE, USAGE ON WAREHOUSE {{ wh.rename }} 
+TO ROLE ROLE_{{ wh.rename }};
+{% endif %}
+
+{% if 'resource_monitor_name' in wh -%}
+{% if wh.resource_monitor_name -%}
+USE ROLE ACCOUNTADMIN;
+ALTER WAREHOUSE IF EXISTS
+{% if 'rename' in wh and wh.rename %}
+  {{ wh.rename }} 
+{% else %}
+ {{ wh.wh_name }} 
+{% endif %}
+SET RESOURCE_MONITOR = {{ wh.resource_monitor_name }};
+
+USE ROLE SECURITYADMIN;
+{% endif -%}
+{% endif -%}
+
+-- Granting SYSADMIN the ability to modify the warehosue 
+{% if 'rename' in wh and wh.rename%}
+GRANT OPERATE,USAGE,MONITOR,MODIFY ON WAREHOUSE {{ wh.rename }} 
+TO ROLE SYSADMIN; 
+
+--following snowflake best practice and granting all custom roles to sysadmin
+GRANT ROLE ROLE_{{ wh.rename }}
+TO ROLE SYSADMIN; 
+
+{% else %}
+GRANT OPERATE,USAGE,MONITOR,MODIFY ON WAREHOUSE {{ wh.wh_name }} 
+TO ROLE SYSADMIN; 
+
+--following snowflake best practice and granting all custom roles to sysadmin
+GRANT ROLE ROLE_{{ wh.wh_name }}
+TO ROLE SYSADMIN; 
+
+{% endfor %}

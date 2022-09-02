@@ -1,0 +1,30 @@
+{#
+This script can be used once a resource monitor has been created 
+we can then assign the resource monitor to a warehouse or an acount based 
+on the varaiable passed to this script via the YML/JSON file
+#}
+
+{#
+To assign a resource monitor we need the following variables: 
+    resource_monitors [VARIABLE SET]
+        resource_monitor_name [STRING]
+
+    OPTIONAL (provide either ACCOUNT as [TRUE/FALSE] or warehouse name )
+        warehouse [STRING]
+        account [BOOLEAN]
+#}
+USE ROLE ACCOUNTADMIN;
+{% for rm in resource_monitors %}
+    {% if 'warehouse' in rm  %}
+    {% if rm.warehouse  %}
+ALTER WAREHOUSE  {{ rm.warehouse }} 
+SET RESOURCE_MONITOR = {{ rm.resource_monitor_name }};
+    {% endif%}
+    {% endif%}
+        {% if 'account' in rm  %}
+        {% if rm.account  %}
+ALTER ACCOUNT 
+SET RESOURCE_MONITOR = {{ rm.resource_monitor_name }};
+        {% endif%}
+        {% endif%}
+{% endfor %}

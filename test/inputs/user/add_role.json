@@ -1,0 +1,12 @@
+{
+  "ACTION": "ADD_ROLE",
+  "NAME_OF_BODY": "COLLABORATION",
+  "LASTNAME": "",
+  "FIRSTNAME": "",
+  "COLLABORATION_ID": "CON0001015",
+  "ROLE_NAME": "ROLE_DATA_CURATOR",
+  "EMAIL": "",
+  "OKTA_ENABLED": "false",
+  "LOGIN": "",
+  "REGION": "AWS_EU_WEST_2"
+}

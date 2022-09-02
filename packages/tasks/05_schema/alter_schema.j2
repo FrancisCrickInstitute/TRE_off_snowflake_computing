@@ -1,0 +1,58 @@
+{% for schema in schemata %}
+{#
+In the alter script we will update the schema name and as we do this we will 
+update the role names associated with the schema, this means it will be easier 
+to identify schemas and the roles associated with them 
+if a comment variable is provided we can alter the comment but it is not required. 
+#}
+{#
+To alter a schema we need the following variables: 
+    db_name [STRING]
+    shemata [VARIABLE SET]
+        old_schema_name [STRING]
+        new_schema_name [STRING]
+        comment [STRING]
+#}
+
+--using the recommended role to create objects in snowflake
+USE ROLE SYSADMIN;
+USE DATABASE {{ db_name }};
+
+{% if 'old_schema_name' in schema and 'schema_name' in schema %}
+{% if schema.old_schema_name and schema.new_schema_name %}
+ALTER SCHEMA IF EXISTS {{ db_name }}.{{ schema.old_schema_name }} 
+RENAME TO {{schema.new_schema_name}}
+    {% if 'comment' in schema %}
+    {% if schema.comment %}
+WITH COMMENT = '{{ schema.comment }}'
+    {% endif %}
+    {% endif %}
+{% endif %}
+{% endif %}
+;
+
+-- using security admin to create the roles
+USE ROLE SECURITYADMIN;
+
+{% if 'old_schema_name' in schema and 'schema_name' in schema %}
+{% if schema.old_schema_name  and schema.new_schema_name %}
+--Creating read role
+ALTER ROLE IF EXISTS ROLE_{{ schema.old_schema_name }}_RO
+RENAME TO ROLE_{{ schema.new_schema_name }}_RO
+WITH COMMENT = 'role to read all objects in {{ schema.new_schema_name }}';
+
+--creating read write role
+ALTER ROLE IF EXISTS ROLE_{{ schema.old_schema_name }}_RW
+RENAME TO ROLE_{{ schema.new_schema_name }}_RW
+WITH COMMENT = 'role to read and write all objects in {{ schema.new_schema_name }}';
+
+--following snowflake best practice and granting all custom roles to sysadmin
+GRANT ROLE ROLE_{{ schema.new_schema_name }}_RO
+TO ROLE SYSADMIN;
+
+GRANT ROLE ROLE_{{ schema.new_schema_name }}_RW
+TO ROLE SYSADMIN;
+{% endif %}
+{% endif %}
+
+{% endfor -%}

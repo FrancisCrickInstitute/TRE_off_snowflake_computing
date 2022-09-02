@@ -1,0 +1,7 @@
+name: create metadata tables for subaccount
+tasks:
+  - name: metadata tables
+    template: 10_metadata/alter_metadata.j2
+    variables:
+      - name: sql_script_to_run
+        value: {{SQL_SCRIPT}}

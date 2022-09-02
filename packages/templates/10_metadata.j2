@@ -1,0 +1,113 @@
+name: create metadata tables for subaccount
+tasks:
+  - name: metadata tables
+    template: 10_metadata/show_command_table.j2
+    revert: 10_metadata/show_command_table_rollback.j2
+    variables:
+      - name: show_tables
+        value:
+          - name: SHARES
+            key_identifier: name
+          - name: WAREHOUSES
+            key_identifier: name
+          - name: RESOURCE_MONITORS
+            key_identifier: name
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTES
+
+  - name: metadata tables
+    template: 10_metadata/account_usage_table.j2
+    revert: 10_metadata/account_usage_table_rollback.j2
+    variables:
+      - name: show_tables
+        value:
+          - name: ACCESS_HISTORY
+          - name: AUTOMATIC_CLUSTERING_HISTORY
+          - name: COMPLETE_TASK_GRAPHS
+          - name: COPY_HISTORY
+          - name: DATABASES
+          - name: DATABASE_STORAGE_USAGE_HISTORY
+          - name: DATA_TRANSFER_HISTORY
+          - name: GRANTS_TO_ROLES
+          - name: GRANTS_TO_USERS
+          - name: LOAD_HISTORY
+          - name: LOGIN_HISTORY
+          - name: METERING_DAILY_HISTORY
+          - name: METERING_HISTORY
+          - name: PIPE_USAGE_HISTORY
+          - name: REPLICATION_USAGE_HISTORY
+          - name: ROLES
+          - name: SCHEMATA
+          - name: STAGES
+          - name: STAGE_STORAGE_USAGE_HISTORY
+          - name: TAGS
+          - name: TAG_REFERENCES
+          - name: USERS
+          - name: STORAGE_USAGE
+          - name: QUERY_HISTORY
+          - name: WAREHOUSE_METERING_HISTORY
+          - name: SESSIONS
+          - name: TASK_HISTORY
+          - name: COLUMNS
+          - name: TABLES
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTE
+      - name: snowflake_schema
+        value: ACCOUNT_USAGE
+      - name: source_db_name
+        value: SNOWFLAKE
+
+  - name: information schema tables
+    template: 10_metadata/account_usage_table.j2
+    revert: 10_metadata/account_usage_table_rollback.j2
+    variables:
+      - name: show_tables
+        value:
+          - name: USAGE_PRIVILEGES
+          - name: TABLE_STORAGE_METRICS
+          - name: PROCEDURES
+          - name: OBJECT_PRIVILEGES
+          - name: TABLE_PRIVILEGES
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTE
+      - name: snowflake_schema
+        value: INFORMATION_SCHEMA
+      - name: source_db_name
+        value: SNOWFLAKE
+
+
+  # hard code REGION and ORG_ADMIN_ACCOUNT
+  - name: replicate to org admin account
+    template: 10_metadata/create_replica.j2
+    revert: 10_metadata/create_replica_rollback.j2
+    variables:
+      - name: master_region
+        value: AWS_EU_WEST_2
+      - name: db_name
+        value: METADATA_DB
+      - name: org_admin_acc
+        value: XN50676

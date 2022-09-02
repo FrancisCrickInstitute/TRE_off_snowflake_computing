@@ -1,0 +1,102 @@
+name: create metadata tables for subaccount
+tasks: 
+  - name: creating archive role
+    template: 08_custom_roles/create_role.j2
+    revert: 08_custom_roles/delete_role.j2
+    variables:
+      - name: roles
+        value:  
+        - role_name: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+          comment: Archive role to run the compute 
+
+  - name: grant archive role accountadmin rights
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables:
+      - name: roles
+        value:
+        - role_name: ACCOUNTADMIN
+          recipient_type: ROLE
+          recipient_name: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+  
+  - name: grant archive role to ACCOUNTADMIN_MAIN
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables:
+      - name: roles
+        value:
+        - role_name: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+          recipient_type: USER
+          recipient_name: ACCOUNTADMIN_MAIN
+
+  - name: create resource monitor for archive
+    template: 03_resource_monitor/create_resource_monitor.j2
+    variables:
+      - name: resource_monitors
+        value:
+        - resource_monitor_name: {{NAME_OF_BODY}}_ARCHIVE_RM
+          credit_quota: {{CREDITS_ARCHIVE}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+
+  - name: Revoke all roles from all users except accountadmin_main
+    template: 09_users/revoke_all_users.j2
+    variables:
+      - name: role_name
+        value: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+  
+  - name: create archive warehouse
+    template: 06_warehouse/create_warehouse.j2
+    revert: 06_warehouse/delete_warehouse.j2
+    variables:
+      - name: warehouse
+        value:
+        - wh_name: {{NAME_OF_BODY}}_ARCHIVE_XS_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: archive warehouse to allow seperate compute
+          add_resource_monitor: false
+          resource_monitor_name: {{NAME_OF_BODY}}_ARCHIVE_RM
+
+  - name: suspend all warehouses
+    template: 06_warehouse/suspend_all_warehouse.j2
+    variables:
+      - name: role_name
+        value: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: metadata_wh
+        value: CORE_WH
+      - name: archive_wh
+        value: {{NAME_OF_BODY}}_ARCHIVE_XS_WH
+
+  - name: set end_timestamp for all resource monitors
+    template: 03_resource_monitor/archive_resource_monitor.j2
+    variables:
+      - name: role_name
+        value: ROLE_{{NAME_OF_BODY}}_ARCHIVE
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: metadata_wh
+        value: CORE_WH
+      - name: archive_wh
+        value: {{NAME_OF_BODY}}_ARCHIVE_XS_WH
+      - name: archive_resource_monitor
+        value: {{NAME_OF_BODY}}_ARCHIVE_RM
+      - name: archive_date
+        value: {{ARCHIVE_DATE}}
+

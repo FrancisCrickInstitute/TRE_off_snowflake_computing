@@ -1,0 +1,13 @@
+{#
+A resource monitor can be deleted without any impact on the objects that are linked to it
+this will mean any restrictions applied by the resource monitor on objects will disappear
+#}
+{#
+To delete a database we need the following variables: 
+    resource_monitors [VARIABLE SET]
+        resource_monitor_name [STRING]
+#}
+USE ROLE ACCOUNTADMIN;
+{% for rm in resource_monitors %}
+DROP RESOURCE MONITOR IF EXISTS {{ rm.resource_monitor_name }};
+{% endfor %}

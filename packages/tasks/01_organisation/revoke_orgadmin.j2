@@ -1,0 +1,10 @@
+{#
+To revoke ORGADMIN priviledge we need the following variables: 
+    users [VARIABLE SET]
+        user_name [STRING]
+#}
+
+USE ROLE ACCOUNTADMIN; 
+{% for user in users %}
+REVOKE ROLE ORGADMIN FROM USER {{ user.user_name }};
+{% endfor %}

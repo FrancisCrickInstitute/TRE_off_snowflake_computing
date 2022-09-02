@@ -1,0 +1,17 @@
+USE ROLE ACCOUNTADMIN;
+{% for share in share_info%}
+{% if 'db_name' in share 
+    and 'locator_id' in share 
+    and 'accountname' in share
+    and 'share_name' in share
+    and 'comment' in share
+    and 'role_name' in share %}
+
+CREATE DATABASE IF NOT EXISTS "{{ shared.db_name }}" 
+FROM SHARE {{ share.locator_id }}.{{ share.accountname }}."{{ share.share_name }}" 
+COMMENT='{{ share.comment}}';
+
+GRANT IMPORTED PRIVILEGES ON DATABASE "{{ shared.db_name }}" 
+TO ROLE "{{ share.role_name }}";
+{% endif %}
+{% endfor %}

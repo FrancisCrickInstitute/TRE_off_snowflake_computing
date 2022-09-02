@@ -1,0 +1,99 @@
+name: create a new experiment for an existing collaboration
+
+tasks: 
+  - name: create resource monitor
+    template: 03_resource_monitor/create_resource_monitor.j2
+    revert: 03_resource_monitor/delete_resource_monitor.j2
+    variables:
+      - name: resource_monitors
+        value:
+        - resource_monitor_name: {{NAME_OF_BODY}}_{{NAME_OF_EXPERIMENT}}_XS_EX_RM
+          credit_quota: {{CREDITS_COLLAB_EXPERIMENTER}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+
+  - name: create 2 default warehouse
+    template: 06_warehouse/create_warehouse.j2
+    revert: 06_warehouse/delete_warehouse.j2
+    variables:
+      - name: warehouse
+        value:
+        - wh_name: {{NAME_OF_BODY}}_{{NAME_OF_EXPERIMENT}}_XS_EX_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: warehouse for experimenter to run 
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_{{NAME_OF_EXPERIMENT}}_XS_EX_RM
+
+  - name: create schemas for the new experiment
+    template: 05_schema/create_schema.j2
+    revert: 05_schema/delete_schema.j2
+    variables:
+      - name: db_name
+        value: {{NAME_OF_BODY}}_SCIENCE_DB
+      - name: schemata
+        value:
+        - schema_name: {{NAME_OF_EXPERIMENT}}_SCH
+          comment: Experiment schema for the additional experiment {{NAME_OF_EXPERIMENT}} for existing collaboration {{NAME_OF_BODY}}
+  
+  - name: creating Experiment sub account roles
+    template: 08_custom_roles/create_role.j2
+    revert: 08_custom_roles/delete_role.j2
+    variables:
+      - name: roles
+        value:  
+        - role_name: ROLE_{{NAME_OF_EXPERIMENT}}_SCH_RO
+          comment: Read only access to {{NAME_OF_EXPERIMENT}} schema 
+        - role_name: ROLE_{{NAME_OF_EXPERIMENT}}_SCH_RW
+          comment:  Read write access to {{NAME_OF_EXPERIMENT}} schema 
+        - role_name: ROLE_EXPERIMENTER_{{NAME_OF_EXPERIMENT}}
+          comment: ROLE_EXPERIMENTER role that has the ability to work on specific experiments
+  
+  - name: granting collaboration sub account roles
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables: 
+      - name: roles
+        value: 
+        - role_name: ROLE_{{NAME_OF_EXPERIMENT}}_SCH_RW
+          recipient_type: ROLE 
+          recipient_name: ROLE_DATA_CURATOR
+        - role_name: ROLE_{{NAME_OF_EXPERIMENT}}_SCH_RW
+          recipient_type: ROLE 
+          recipient_name: ROLE_EXPERIMENTER_{{NAME_OF_EXPERIMENT}}
+  
+  - name: execute experiment table
+    template: 10_metadata/experiment_live.j2
+    revert: 10_metadata/experiment_live_rollback.j2
+    variables:
+      - name: DATABASE
+        value: METADATA_DB
+      - name: SCHEMA
+        value: METADATA_SCH
+      - name: WAREHOUSE
+        value: METADATA_WH
+      - name: NAME_OF_BODY
+        value: {{NAME_OF_BODY}}
+      - name: experiment_name
+        value: {{NAME_OF_EXPERIMENT}}  
+      - name: start_date
+        value: {{START_TIMESTAMP}}
+      - name: end_date
+        value: {{END_TIMESTAMP}}
+      - name: credit_collab_experiment
+        value: {{CREDITS_COLLAB_EXPERIMENTER}}
+      - name: credit_collab_curator
+        value: {{CREDITS_COLLAB_DATA_CURATOR}}
+      - name: contact_period
+        value: {{CONTRACT_PERIOD}}
+      - name: NOTIFY_PERCENT
+        value: {{NOTIFY_PERCENT}}
+
+
+

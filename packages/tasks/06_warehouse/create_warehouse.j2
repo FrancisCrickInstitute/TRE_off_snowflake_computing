@@ -1,0 +1,54 @@
+{% for wh in warehouse %}
+USE ROLE SYSADMIN;
+{#
+The create warehouse script allows us to create a unit of compute in snowflake 
+without this we cannot query the data or perform any analysis  tasks.
+We use the SYSADMIN role to create the warehouse and are also creating roles that allows us to use the 
+warehouse, using this we will be able to allow only specific roles that can access warehouses 
+and we can monitor the costs for all the work that is being done in snowflake
+#}
+
+{#
+To create a warehouse we need the following variables:
+    warehouse [VARIABLE SET]
+      wh_name [STRING]
+      rename [STRING]
+      wh_size [STRING]
+      auto_suspend_seconds [STRING]
+      auto_resume [STRING]
+      comment [STRING]
+      resource_monitor_name [STRING]
+#}
+CREATE WAREHOUSE IF NOT EXISTS {{ wh.wh_name }} 
+WITH WAREHOUSE_SIZE = {{ wh.wh_size }} 
+WAREHOUSE_TYPE = 'STANDARD' 
+AUTO_SUSPEND = {{ wh.auto_suspend_seconds }} 
+AUTO_RESUME = {{ wh.auto_resume }} 
+COMMENT = '{{ wh.comment }}';
+
+USE ROLE SECURITYADMIN; 
+
+CREATE ROLE IF NOT EXISTS ROLE_{{ wh.wh_name }} 
+WITH COMMENT = 'Role created to allow usage of {{ wh.wh_name }} warehouse';
+
+GRANT OPERATE, USAGE ON WAREHOUSE {{ wh.wh_name }} 
+TO ROLE ROLE_{{ wh.wh_name }};
+
+
+{% if 'resource_monitor_name' in wh  and wh.resource_monitor_name -%}
+
+USE ROLE ACCOUNTADMIN;
+ALTER WAREHOUSE {{ wh.wh_name }} 
+SET RESOURCE_MONITOR = {{ wh.resource_monitor_name }};
+
+USE ROLE SECURITYADMIN;
+{% endif -%}
+
+-- Granting SYSADMIN the ability to modify the warehosue 
+GRANT OPERATE,USAGE,MONITOR,MODIFY ON WAREHOUSE {{ wh.wh_name }} 
+TO ROLE SYSADMIN; 
+
+--following snowflake best practice and granting all custom roles to sysadmin
+GRANT ROLE ROLE_{{ wh.wh_name }}
+TO ROLE SYSADMIN; 
+{% endfor %}

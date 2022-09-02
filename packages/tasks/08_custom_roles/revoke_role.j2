@@ -1,0 +1,13 @@
+USE ROLE SECURITYADMIN;
+{% for rl in roles %}
+{% if rl.role_name != None %}
+REVOKE ROLE {{ rl.role_name }}
+FROM {{ rl.recipient_type }} "{{ rl.recipient_name }}";
+{% endif -%}
+{% endfor %}
+
+use role accountadmin;
+use database METADATA_DB;
+use schema METADATA_SCH;
+use warehouse CORE_WH;
+call GRANTS_TO_USERS_LIVE_stored_procedure();

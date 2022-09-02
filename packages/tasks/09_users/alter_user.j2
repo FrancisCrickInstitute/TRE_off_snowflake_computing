@@ -1,0 +1,35 @@
+{% for usr in users %}
+    
+    USE ROLE SECURITYADMIN;
+    ALTER USER IF EXISTS "{{usr.username}}"
+    SET
+    {% if 'password' in usr %}
+    PASSWORD = "{{usr.password}}"
+    {% endif %}
+    {% if 'change_password' in usr %}
+    MUST_CHANGE_PASSWORD = {{usr.change_password}}
+    {% endif %}
+    {% if 'login' in usr %}
+    LOGIN_NAME = "{{usr.login}}"
+    {% endif %}
+    {% if 'display_name' in usr %}
+    DISPLAY_NAME = "{{usr.display_name}}"
+    {% endif %}
+    {% if 'first_name' in usr %}
+    FIRST_NAME = "{{usr.first_name}}"
+    {% endif %}
+    {% if 'last_name' in usr %}
+    LAST_NAME = "{{usr.last_name}}"
+    {% endif %}
+    {% if 'email' in usr %}
+    EMAIL = '{{usr.email}}'
+    {% endif %}
+    {% if 'comment' in usr %}
+    COMMENT = "{{usr.comment}}"
+    {% endif %};
+
+    USE ROLE ACCOUNTADMIN;
+    USE DATABASE {{ usr.db_name}};
+    USE SCHEMA {{ usr.schema_name }};
+    EXECUTE TASK SHOW_COMMAND_USERS;
+{% endfor %}

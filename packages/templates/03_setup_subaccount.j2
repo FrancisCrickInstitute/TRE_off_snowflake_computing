@@ -1,0 +1,24 @@
+name: creating collaboration account to read all metadata
+tasks: 
+  - name: creating account
+    template: 02_account/create_account.j2
+    revert: 02_account/delete_account.j2
+    variables:
+      - name: accounts
+        value:
+        - account_name: {{NAME_OF_BODY}}
+          account_admin_name: ACCOUNTADMIN_MAIN
+          account_admin_password: {{PASSWORD}}
+          account_admin_email: default@email.ac.uk
+
+          {% if (HIPAA is defined and HIPAA.upper() == "TRUE") or (ISO is defined and ISO.upper() == "TRUE") %}
+          {# we will get HIPA and ISO as varables from ServiceNow and they will be boolean#}
+          snowflake_edition: BUSINESS_CRITICAL
+          {% else %}
+          snowflake_edition: ENTERPRISE
+          {% endif %}
+
+          region: {{REGION}}
+          consortium_id: {{CONSORTIUM_ID}}
+          account_type: {{TYPE}}
+          warehouse: TEST_WH_2 {# relpace the WH name with something more relevant #}

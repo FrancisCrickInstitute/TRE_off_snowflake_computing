@@ -1,0 +1,8 @@
+{
+  "NAME": "EXTERNAL",
+  "NAME_OF_BODY": "EXTERNAL",
+  "URL": "s3://<bucket_name>",
+  "AWS_KEY_ID": "<key_id>",
+  "AWS_SECRET_KEY": "<secret_key>",
+  "PROVIDER": "AWS"
+}

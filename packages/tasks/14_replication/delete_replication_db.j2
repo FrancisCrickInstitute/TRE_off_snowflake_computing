@@ -1,0 +1,8 @@
+USE ROLE ACCOUNTADMIN;
+{% for share in share_info%}
+{% if 'db_name' in share %}
+
+DROP DATABASE IF EXISTS "{{ shared.db_name }}" ;
+
+{% endif %}
+{% endfor %}

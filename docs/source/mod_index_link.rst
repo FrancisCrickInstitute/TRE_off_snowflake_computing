@@ -1,0 +1,4 @@
+Technical documentation
+=======================
+
+* :ref:`modindex`

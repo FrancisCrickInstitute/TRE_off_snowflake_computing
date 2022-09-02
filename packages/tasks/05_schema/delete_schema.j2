@@ -1,0 +1,29 @@
+{% for schema in schemata %}
+{#
+When deleting shema we should clear the roles so we do not have orphan roles
+This script ensures we remove any roles related to the schema
+#}
+{#
+To delete a schema we need the following variables: 
+    db_name [STRING]
+    shemata [VARIABLE SET]
+        schema_name [STRING]
+#}
+--using the recommended role to create objects in snowflake
+USE ROLE SYSADMIN;
+USE DATABASE {{ db_name }};
+
+DROP SCHEMA IF EXISTS {{ db_name }}.{{ schema.schema_name }};
+
+-- using security admin to drop the roles
+USE ROLE SECURITYADMIN;
+
+--Drop roles if they exist 
+
+--Dropping read role
+DROP ROLE IF EXISTS ROLE_{{ schema.schema_name }}_RO;
+
+--Dropping read write role
+DROP ROLE IF  EXISTS ROLE_{{ schema.schema_name }}_RW;
+
+{% endfor -%}

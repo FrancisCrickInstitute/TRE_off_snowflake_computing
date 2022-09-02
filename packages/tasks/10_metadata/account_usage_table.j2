@@ -1,0 +1,98 @@
+
+{# This template aims for 2 metadata table from SNOWFLAKE database:
+SNOWFLAKE.ACCOUNT_USAGE
+SNOWFLAKE.INFORMATION_SCHEMA
+These schemas contains metadata views for each account. These data are:
+- delay up to 120 minutes
+- expired after 1 years
+So, to keep data as history, we need to copy changes to a database
+Then replicate or share to reporting database (ORG_ADMIN) #}
+
+{% for table in show_tables %}
+-- Need to have database and schema_name ready
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ warehouse_name }};
+
+-- Create stored procedure to run all metadata queries
+
+CREATE OR REPLACE PROCEDURE acc_usage_table_{{ table.name }}_stored_procedure()
+  returns varchar
+  LANGUAGE SQL
+  EXECUTE AS CALLER
+  AS 
+$$
+begin
+    create
+    or replace table {{ db_name }}.{{ schemata }}.{{ table.name }}_temp as (
+        SELECT
+            *
+        FROM
+            {{ source_db_name }}.{{ snowflake_schema}}.{{ table.name }}
+    );
+
+    -- Create the first version if not exists
+
+    create table if not exists {{ db_name }}.{{ schemata }}.current_{{ table.name }} as (
+        SELECT 
+        * 
+        FROM {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+    );
+
+    -- Create union based version if not exists
+    create table if not exists {{ db_name }}.{{ schemata }}.{{ table.name }} as (
+        SELECT 
+        current_account() as account_locator,
+        '{{ name_of_body }}' as account_name,
+        current_timestamp() as UPDATED_AT,
+        * 
+        FROM {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+    );
+
+    -- Insert modified or new row to history
+
+    insert into
+        {{ db_name }}.{{ schemata }}.{{ table.name }}
+    select
+        current_account() as account_locator,
+        '{{ name_of_body }}' as account_name,
+        current_timestamp() as UPDATED_AT,
+        *
+    from
+        (
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+                minus
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.current_{{ table.name }}
+        );
+
+    -- Insert deleted to history, seems that acc usage does not have delete option
+
+    -- Change temp to current entity data
+
+    create or replace table {{ db_name }}.{{ schemata }}.current_{{ table.name }}
+    as select * from {{ db_name }}.{{ schemata }}.{{ table.name }}_temp;
+
+    -- Drop temp table after all processing
+
+    drop table {{ db_name }}.{{ schemata }}.{{ table.name }}_temp;
+
+-- End of procedure
+end;
+$$;
+
+-- Create task to schedule refresh show command tables
+create task if not exists
+acc_usage_command_{{ table.name }} WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+call acc_usage_table_{{ table.name }}_stored_procedure();
+
+-- Resume task
+alter task acc_usage_command_{{ table.name }} resume;
+execute task acc_usage_command_{{ table.name }};
+{% endfor %}

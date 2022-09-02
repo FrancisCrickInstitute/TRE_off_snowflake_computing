@@ -1,0 +1,145 @@
+
+{# This template helps us to capture some great data but
+snowflake does not have it in metadata database
+We use RESULT_SCAN(LAST_QUERY_ID()) to capture SHOW + entity table
+Meaningful data could be: SHARES, RESOURCE MONITORS, WAREHOUSES
+We use 2 more columns to track history:
+- IS_DELETED: each entity has an unique identifier such as name
+we use this one to determind existing object, we compare with the last run to 
+know that this entity is deleted or not.
+- UPDATED_AT: same as ACCOUNT_USAGE and INFORMATION_SCHEMA, this field keep the latest changes
+for each table #}
+
+
+{% for table in show_tables %}
+-- Need to have database and schema_name ready
+use role accountadmin;
+use database {{ db_name }};
+use schema {{ schemata }};
+use warehouse {{ warehouse_name }};
+
+-- Create stored procedure to run all metadata queries
+
+CREATE OR REPLACE PROCEDURE show_table_{{ table.name }}_stored_procedure()
+  returns varchar
+  LANGUAGE SQL
+  EXECUTE AS CALLER
+  AS 
+$$
+begin
+    {% if table.name == 'RESOURCE_MONITORS' %}
+    show RESOURCE MONITORS;
+    {% else %}
+    show {{ table.name }};
+    {% endif %}
+    create
+    or replace table {{ db_name }}.{{ schemata }}.{{ table.name }}_temp as (
+        SELECT
+            *
+        FROM
+            TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+    );
+
+    -- Create the first version if not exists
+
+    create table if not exists {{ db_name }}.{{ schemata }}.current_{{ table.name }} as (
+        SELECT 
+        * 
+        FROM {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+    );
+
+    -- Create union based version if not exists
+    create table if not exists {{ db_name }}.{{ schemata }}.{{ table.name }} as (
+        SELECT 
+        current_account() as account_locator,
+        '{{ name_of_body }}' as account_name,
+        * ,
+        current_timestamp() as UPDATED_AT,
+        false as IS_DELETED
+        FROM {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+    );
+
+    -- Insert modified or new row to history
+
+    insert into
+        {{ db_name }}.{{ schemata }}.{{ table.name }}
+    select
+        current_account() as account_locator,
+        '{{ name_of_body }}' as account_name,
+        *,
+        current_timestamp() as UPDATED_AT,
+        false as IS_DELETED
+    from
+        (
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+                minus
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.current_{{ table.name }}
+        );
+
+    -- Insert deleted to history
+
+    insert into
+        {{ db_name }}.{{ schemata }}.{{ table.name }}
+    select
+        current_account() as account_locator,
+        '{{ name_of_body }}' as account_name,
+        *,
+        current_timestamp() as UPDATED_AT,
+        TRUE as IS_DELETED
+    from
+        (
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.current_{{ table.name }} minus
+            select
+                *
+            from
+                {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+        )
+    where
+        "{{ table.key_identifier }}" not in (
+            select
+                "{{ table.key_identifier }}"
+            from
+                (
+                    select
+                        *
+                    from
+                        {{ db_name }}.{{ schemata }}.{{ table.name }}_temp
+                        minus
+                    select
+                        *
+                    from
+                        {{ db_name }}.{{ schemata }}.current_{{ table.name }}
+                )
+        );
+
+    -- Change temp to current entity data
+
+    create or replace table {{ db_name }}.{{ schemata }}.current_{{ table.name }}
+    as select * from {{ db_name }}.{{ schemata }}.{{ table.name }}_temp;
+
+    -- Drop temp table after all processing
+
+    drop table {{ db_name }}.{{ schemata }}.{{ table.name }}_temp;
+
+-- End of procedure
+end;
+$$;
+
+-- Create task to schedule refresh show command tables
+create task if not exists
+show_command_{{ table.name }} WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+call show_table_{{ table.name }}_stored_procedure();
+
+-- Resume task
+alter task show_command_{{ table.name }} resume;
+execute task show_command_{{ table.name }};
+{% endfor %}

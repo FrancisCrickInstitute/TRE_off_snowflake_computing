@@ -1,0 +1,21 @@
+{% for rl in roles %}
+USE ROLE SECURITYADMIN;
+
+CREATE ROLE IF NOT EXISTS {{ rl.role_name }} 
+WITH COMMENT = '{{ rl.comment }}';
+
+--Snowflake best practice
+{% if rl.role_name != 'ROLE_BOARD_MEMBER' %} 
+{% if rl.role_name != 'ROLE_ORG_DATA_CURATOR' %}
+{% if rl.role_name != 'ROLE_ACCOUNTABLE_PERSON' %}
+{% if rl.role_name != 'ROLE_METADATA_CURATOR' %}
+{% if '_ARCHIVE' not in rl.role_name %}
+GRANT ROLE {{ rl.role_name }}
+TO ROLE SYSADMIN; 
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+

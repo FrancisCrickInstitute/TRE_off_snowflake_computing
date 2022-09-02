@@ -1,0 +1,17 @@
+{# 
+Run this template in ORG_ADMIN to create a dabtase as replica for different region metadata
+We also need a refresh task to update latest data. #}
+
+use role accountadmin;
+create database if not exists {{ name_of_body }}_SHARE_IN_DB{{ environment }}
+as replica of {{ subaccount_region }}.{{ sub_acc_locator }}.METADATA_DB;
+
+-- replica needs tasks to refresh in a frequency
+use database {{ org_admin_db }};
+use schema {{ org_admin_schema }};
+use warehouse {{ warehouse_name }};
+create task if not exists
+replica_refresh_task_for_{{ name_of_body }} WAREHOUSE = {{ warehouse_name }} SCHEDULE = '{{ period }}' AS
+alter database {{ name_of_body }}_SHARE_IN_DB{{ environment }} refresh;
+alter task replica_refresh_task_for_{{ name_of_body }} resume;
+execute task replica_refresh_task_for_{{ name_of_body }};

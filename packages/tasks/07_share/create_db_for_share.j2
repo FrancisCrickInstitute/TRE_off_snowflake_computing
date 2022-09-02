@@ -1,0 +1,18 @@
+{% for share in shares %}
+USE ROLE ACCOUNTADMIN; 
+
+CREATE SHARE IF NOT EXISTS {{ share.share_name }};
+
+GRANT USAGE ON DATABASE {{ share.database_name }} 
+TO SHARE {{ share.share_name }};
+
+GRANT USAGE ON SCHEMA {{ share.database_name }}.{{ share.schema_name }}
+TO SHARE {{ share.share_name }};
+
+GRANT SELECT ON ALL TABLES IN SCHEMA {{ share.database_name }}.{{ share.schema_name }} 
+TO SHARE {{ share.share_name }};
+
+GRANT SELECT ON ALL VIEWS IN SCHEMA {{ share.database_name }}.{{ share.schema_name }} 
+TO SHARE {{ share.share_name }};
+
+{% endfor %}

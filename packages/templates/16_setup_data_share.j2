@@ -1,0 +1,19 @@
+name: Setup a data share between snowflake accounts
+tasks:
+  - name: Share data from an entity to a collaboration
+    template: 07_share/create_db_for_share.j2
+    revert: 07_share/delete_db_for_share.j2
+    variables:
+      name: share
+      value: 
+        - share_name: {{ share_name }}
+          database_name: {{ database_name }}
+          schema_name: {{ schema_name }}
+ 
+
+{# - VARIABLES NEEDED FROM SERVICE NOW
+share_name
+database_name
+schema_name
+account_locator
+#}

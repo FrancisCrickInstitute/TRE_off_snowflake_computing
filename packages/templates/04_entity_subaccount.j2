@@ -1,0 +1,257 @@
+name: create entity account to hold metadata for administration purposes and data for experiments
+
+tasks:
+  - name: create resource monitor
+    template: 03_resource_monitor/create_resource_monitor.j2
+    revert: 03_resource_monitor/delete_resource_monitor.j2
+    variables:
+      - name: resource_monitors
+        value:
+        - resource_monitor_name: {{NAME_OF_BODY}}_ACCOUNT_RM
+          credit_quota: {{CREDITS_BUDGET_ACCOUNT}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+        - resource_monitor_name: {{NAME_OF_BODY}}_XS_DS_RM
+          credit_quota: {{CREDITS_SUBACCOUNT_DATA_SHARER}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+        - resource_monitor_name: {{NAME_OF_BODY}}_XS_DP_RM
+          credit_quota: {{CREDITS_SUBACCOUNT_DATA_PROCESSOR}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+        - resource_monitor_name: {{NAME_OF_BODY}}_XS_DL_RM
+          credit_quota: {{CREDITS_SUBACCOUNT_DATA_LOADER}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+        - resource_monitor_name: {{NAME_OF_BODY}}_XS_AP_RM
+          credit_quota: {{CREDITS_SUBACCOUNT_ACCOUNTABLE_PERSON}}
+          frequency: {{CONTRACT_PERIOD}}
+          start_timestamp: {{START_TIMESTAMP}}
+          end_timestamp: {{END_TIMESTAMP}}
+          notify_percent: {{NOTIFY_PERCENT}}
+          suspend_percent: 95
+          suspend_immediate_percent: 100
+          resource_monitor_role: SYSADMIN
+
+  - name: create 2 dbs one for experiments and one for metadata
+    template: 04_database/create_database.j2
+    revert: 04_database/drop_database.j2
+    variables:
+      - name: databases
+        value:
+        - db_name: {{NAME_OF_BODY}}_DB
+          comment: experimental DB for {{NAME_OF_BODY}}
+        - db_name: METADATA_DB
+          comment: metadata DB for {{NAME_OF_BODY}}
+
+  - name: create schemas for metadata and experiment
+    template: 05_schema/create_schema.j2
+    revert: 05_schema/delete_schema.j2
+    variables:
+      - name: db_name
+        value: {{NAME_OF_BODY}}_DB
+      - name: schemata
+        value:
+        - schema_name: {{NAME_OF_BODY}}_SCH
+          comment: Main schema for {{NAME_OF_BODY}} database
+
+  - name: create schemas for metadata and experimentA
+    template: 05_schema/create_schema.j2
+    revert: 05_schema/delete_schema.j2
+    variables:
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value:
+        - schema_name: METADATA_SCH
+          comment: ACCOUNT_ADMIN_DB for {{NAME_OF_BODY}} to collect metadata to send data to org_admin
+
+  - name: create default warehouse
+    template: 06_warehouse/create_warehouse.j2
+    revert: 06_warehouse/delete_warehouse.j2
+    variables:
+      - name: warehouse
+        value:
+        - wh_name: CORE_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: core warehouse created to allow simple selects to happen
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_ACCOUNT_RM
+        - wh_name: {{NAME_OF_BODY}}_XS_DL_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: warehouse for data loader to run queries
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_XS_DL_RM
+        - wh_name: {{NAME_OF_BODY}}_XS_DP_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: warehouse for data processor to run queries
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_XS_DP_RM
+        - wh_name: {{NAME_OF_BODY}}_XS_DS_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: warehouse for data sharer to run queries
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_XS_DS_RM
+        - wh_name: METADATA_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: metadata warehouse created to curate metadata
+          add_resource_monitor: false
+        - wh_name: {{NAME_OF_BODY}}_XS_AP_WH
+          wh_size: XSMALL
+          auto_suspend_seconds: 60
+          auto_resume: true
+          comment: warehouse for data sharer to run queries
+          add_resource_monitor: true
+          resource_monitor_name: {{NAME_OF_BODY}}_XS_AP_RM
+
+  - name: create internal stage
+    template: 12_internal_stage/create_internal_stage.j2
+    revert: 12_internal_stage/delete_internal_stage.j2
+    variables:
+      - name: stage
+        value:
+          - stage_name: INTERNAL_STAGE
+            comment: Internal stage for storing images and binary data
+            db_name: {{NAME_OF_BODY}}_DB
+
+  - name: grants to roles real time update
+    template: 10_metadata/live_metadata_tables.j2
+    revert: 10_metadata/live_metadata_tables_rollback.j2
+    variables:
+      - name: db_name
+        value: METADATA_DB
+      - name: schemata
+        value: METADATA_SCH
+      - name: name_of_body
+        value: {{ NAME_OF_BODY }}
+      - name: warehouse_name
+        value: CORE_WH
+      - name: period
+        value: 60 MINUTE
+      - name: consortium_id
+        value: {{CONSORTIUM_ID}}
+
+  - name: create 7 roles within subaccount
+    template: 08_custom_roles/create_role.j2
+    revert: 08_custom_roles/delete_role.j2
+    variables:
+      - name: roles
+        value:
+        {# ENTITY SPECIFIC ROLE #}
+        - role_name: ROLE_DATA_SHARER
+          comment: role for data sharer
+        - role_name: ROLE_DATA_PROCESSOR
+          comment: role for data processor
+        - role_name: ROLE_DATA_LOADER
+          comment: role for data loader
+        - role_name: ROLE_ACCOUNTABLE_PERSON
+          comment: role for accountable person
+        {# METADATA SPECIFIC ROLE #}
+        - role_name: ROLE_ORG_DATA_CURATOR
+          comment: role for data curator
+        - role_name: ROLE_ACCOUNT_REPORTER
+          comment: role for data reporter
+        - role_name: ROLE_METADATA_CURATOR
+          comment: role for metadata curator
+
+
+  - name: create share
+    template: 07_share/grant_share_privilege.j2
+    revert: 07_share/revoke_share_privilege.j2
+    variables:
+      - name: share_roles
+        value:
+        - role_name: ROLE_DATA_SHARER
+          create_share: true
+        - role_name: ROLE_METADATA_CURATOR
+          create_share: true
+
+
+  - name: grant 7 roles within subaccount
+    template: 08_custom_roles/grant_role.j2
+    revert: 08_custom_roles/revoke_role.j2
+    variables:
+      - name: roles
+        value:
+        - role_name: ROLE_{{NAME_OF_BODY}}_XS_AP_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_ACCOUNTABLE_PERSON
+        - role_name: ROLE_{{NAME_OF_BODY}}_SCH_RO
+          recipient_type: ROLE
+          recipient_name: ROLE_ACCOUNTABLE_PERSON
+        - role_name: ROLE_METADATA_SCH_RO
+          recipient_type: ROLE
+          recipient_name: ROLE_ACCOUNTABLE_PERSON
+          
+        - role_name: ROLE_{{NAME_OF_BODY}}_XS_DS_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_SHARER
+        - role_name: ROLE_{{NAME_OF_BODY}}_SCH_RO
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_SHARER
+
+        - role_name: ROLE_{{NAME_OF_BODY}}_SCH_RW
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_PROCESSOR
+        - role_name: ROLE_{{NAME_OF_BODY}}_XS_DP_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_PROCESSOR
+
+        - role_name: ROLE_{{NAME_OF_BODY}}_SCH_RW
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_LOADER
+
+        - role_name: ROLE_{{NAME_OF_BODY}}_XS_DL_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_DATA_LOADER
+
+          {# METADATA GRANTS #}
+        - role_name: ROLE_METADATA_DB_RW
+          recipient_type: ROLE
+          recipient_name: ROLE_METADATA_CURATOR
+        - role_name: ROLE_METADATA_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_METADATA_CURATOR
+        - role_name: ACCOUNTADMIN
+          recipient_type: ROLE
+          recipient_name: ROLE_METADATA_CURATOR
+
+        - role_name: ROLE_CORE_WH
+          recipient_type: ROLE
+          recipient_name: ROLE_ACCOUNT_REPORTER
+        - role_name: ROLE_METADATA_DB_RO
+          recipient_type: ROLE
+          recipient_name: ROLE_ACCOUNT_REPORTER
+        - role_name: ROLE_METADATA_CURATOR
+          recipient_type: ROLE
+          recipient_name: ROLE_ORG_DATA_CURATOR

@@ -1,0 +1,9 @@
+use role accountadmin;
+use database {{DATABASE}};
+use schema {{SCHEMA}};
+use warehouse {{WAREHOUSE}};
+delete from EXPERIMENT_LIVE
+where
+ACCOUNT_LOCATOR=current_account() and
+ACCOUNT_NAME = '{{NAME_OF_BODY}}' and
+EXPERIMENT = '{{experiment_name}}';
