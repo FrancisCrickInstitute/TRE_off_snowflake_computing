@@ -34,14 +34,14 @@ def handler(event, context):
         event(dict): event triggered by put to s3, containing reference to a json input from ServiceNow, similar to
                     {
                       "ACTION": "ADD_USER",
-                      "NAME_OF_BODY": "DARE_UK_TRE",
-                      "LASTNAME": "Tomasik",
-                      "FIRSTNAME": "Miro",
+                      "NAME_OF_BODY": "COLLABORATION",
+                      "LASTNAME": "",
+                      "FIRSTNAME": "",
                       "CONSORTIUM_ID": "CON0001015",
                       "ROLE_NAME": "ROLE_BOARD_MEMBER",
-                      "EMAIL": "miro.tomasik@infinitelambda.com",
+                      "EMAIL": "",
                       "OKTA_ENABLED": "false",
-                      "LOGIN": "tomasikm@infinitelambda.com",
+                      "LOGIN": "",
                       "REGION": "AWS_EU_WEST_2"
                     }
     """
